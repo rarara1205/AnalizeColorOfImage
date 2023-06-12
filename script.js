@@ -102,6 +102,10 @@ function DisplayImage(){
 let canvas = document.createElement("canvas");
 let ctx = canvas.getContext("2d", {willReadFrequently: true});
 const radius = 200;
+const material = new THREE.RawShaderMaterial({
+    vertexShader: document.getElementById("vertexShader").textContent,
+    fragmentShader: document.getElementById("fragmentShader").textContent
+});
 
 function CreatePointsRGB(){
     canvas.width = image.width;
@@ -111,16 +115,21 @@ function CreatePointsRGB(){
     scene.add(plane);
     let imageData = ctx.getImageData(0, 0, image.width, image.height);
     let imageSize = imageData.data.length;
-    const sprites = [];
+    const boxes = [];
+    const colors = [];
     for(let i=0; i<imageSize; i+=4){
         let [r, g, b] = [imageData.data[i], imageData.data[i+1], imageData.data[i+2]];
         [r, g, b] = [r/255, g/255, b/255];
-        const color = new THREE.Color(r, g, b);
-        const material = new THREE.SpriteMaterial({color: color});
-        const sprite = new THREE.Sprite(material);
-        sprite.position.set(r*radius, g*radius, b*radius);
-        scene.add(sprite);
+        // const color = new THREE.Color(r, g, b);
+        // const material = new THREE.SpriteMaterial({color: color});
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const geometryTrans = geometry.translate(r*radius, g*radius, b*radius);
+        boxes.push(geometryTrans);
+        colors.push(...[r,g,b]);
     }
+    const geometris = BufferGeometryUtils.mergeGeometries(boxes);
+    const mesh = new THREE.Mesh(geometris, material);
+    scene.add(mesh);
 }
 
 CreateCubeRGB();

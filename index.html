@@ -43,6 +43,33 @@
         }
       }
     </script>
+    <script id="vertexShader" type="x-shader/x-vertex">
+      uniform mat4 projectionMatrix;
+      uniform mat4 viewMatrix;
+      uniform mat4 modelMatrix;
+
+      attribute vec3 position;
+      attribute vec3 color;
+
+      varying vec3 vColor;
+
+      void main(){
+        vColor = color;
+        vec4 modelPosition = modelMatrix * vec4(position, 1.0);
+        vec4 viewPosition = viewMatrix * modelPosition;
+        vec4 projectionPosition = projectionMatrix * viewPosition;
+        gl_Position = projectionPosition;
+      }
+    </script>
+    <script id="fragmentShader" type="x-shader/x-fragment">
+      precision mediump float;
+      
+      varying vec3 vColor;
+
+      void main(){
+        gl_FragColor = (vColor, 1.0);
+      }
+    </script>
     <script type="module" src="script.js"></script>
   </head>
   <body>
