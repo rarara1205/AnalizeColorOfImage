@@ -43,7 +43,7 @@
         }
       }
     </script>
-    <script id="vertexShader" type="x-shader/x-vertex">
+    <script id="RGBvertexShader" type="x-shader/x-vertex">
       uniform mat4 projectionMatrix;
       uniform mat4 viewMatrix;
       uniform mat4 modelMatrix;
@@ -61,7 +61,35 @@
         gl_Position = projectionPosition;
       }
     </script>
-    <script id="fragmentShader" type="x-shader/x-fragment">
+    <script id="RGBfragmentShader" type="x-shader/x-fragment">
+      precision mediump float;
+      
+      varying vec3 myPosition;
+      varying vec4 vColor;
+
+      void main(){
+        gl_FragColor = vec4(myPosition, 1.0);
+      }
+    </script>
+    <script id="HSLvertexShader" type="x-shader/x-vertex">
+      uniform mat4 projectionMatrix;
+      uniform mat4 viewMatrix;
+      uniform mat4 modelMatrix;
+
+      attribute vec3 position;
+
+      varying vec3 myPosition;
+      varying vec4 vColor;
+
+      void main(){
+        vec4 modelPosition = modelMatrix * vec4(position, 1.0);
+        myPosition = vec3(position.x/200.0, position.y/200.0, position.z/200.0);
+        vec4 viewPosition = viewMatrix * modelPosition;
+        vec4 projectionPosition = projectionMatrix * viewPosition;
+        gl_Position = projectionPosition;
+      }
+    </script>
+    <script id="HSLfragmentShader" type="x-shader/x-fragment">
       precision mediump float;
       
       varying vec3 myPosition;
