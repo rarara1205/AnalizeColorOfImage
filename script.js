@@ -93,7 +93,7 @@ function DisplayImage(){
     reader.onload = function(e){
         image.src = e.target.result;
         image.onload = function(){
-            CreatePointsHSL();
+            CreatePointsRGB();
         }
     }
 }
@@ -123,7 +123,7 @@ function CreatePointsRGB(){
         let [r, g, b] = [imageData.data[i], imageData.data[i+1], imageData.data[i+2]];
         [r, g, b] = [r/255, g/255, b/255];
         let colors = [];
-        for(let j=0, len = geometry.attributes.position.count*3; j<len; j+3){
+        for(let j=0, len = geometry.attributes.position.count*3; j<len; j+=3){
             colors[j] = r;
             colors[j+1] = g;
             colors[j+2] = b;
@@ -186,7 +186,6 @@ function CreateAxisRGB(){
 
 function CreatePointsHSL(){
     ClearScene();
-    CreateAxisRGB();
     const useAlphaChannel = CheckFileExtension(input.files[0].name) == "png" ? true : false;
     canvas.width = image.width;
     canvas.height = image.height;
