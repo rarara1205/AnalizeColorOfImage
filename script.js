@@ -7,7 +7,7 @@ let rot = 0;
 // レンダラーを作成
 const canvasElement = document.querySelector("#canvas");
 const renderer = new THREE.WebGLRenderer({
-    antialias: false,
+    antialias: true,
     canvas: canvasElement,
 });
 
@@ -66,12 +66,12 @@ function onResize(){
     //レンダラーのサイズ調整
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(width, height);
+    renderer.setClearColor(0x000000, 1);
 
     //カメラのアスペクト比調整
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
 }
-
 
 
 
@@ -88,6 +88,7 @@ function DisplayImage(){
 
     //読み込んだファイルのURLをresultに格納
     reader.readAsDataURL(input.files[0]);
+    console.log(input.files[0].name);
     
     //読み込みが完了次第，画像のURLをsrcに格納して表示
     reader.onload = function(e){
@@ -103,24 +104,26 @@ let canvas = document.createElement("canvas");
 let ctx = canvas.getContext("2d", {willReadFrequently: true});
 const radius = 200;
 
+function CheckFileExtension(fileName){
+  return fileName.split(".").pop();
+}
 
 function CreatePointsRGB(){
     ClearScene();
-    let useAlphaChannel = true;
+    const useAlphaChannel = CheckFileExtension(input.files[0].name) == "png" ? true : false;
     canvas.width = image.width;
     canvas.height = image.height;
     ctx.drawImage(image, 0, 0);
-    const plane = new THREE.AxesHelper(300);
-    scene.add(plane);
+    CreateAxisRGB();
     let imageData = ctx.getImageData(0, 0, image.width, image.height);
     let imageSize = imageData.data.length;
     const boxes = [];
     const colorItemSize = useAlphaChannel ? 4 : 3;
     let count = 0;
     for(let i=0; i<imageSize; i+=colorItemSize){
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
         let [r, g, b] = [imageData.data[i], imageData.data[i+1], imageData.data[i+2]];
         [r, g, b] = [r/255, g/255, b/255];
-        const geometry = new THREE.BoxGeometry(10, 10, 10);
         // let colors = [];
         // for(let j=0, len = geometry.attributes.position.count; j<len; j++){
         //     colors[j] = r;
@@ -162,6 +165,23 @@ function CreateCubeRGB(){
             }
         }
     }
+}
+CreateAxisRGB();
+function CreateAxisRGB(){
+    const geometry = new THREE.BoxGeometry(radius*1.5, 1, 1);
+    geometry.translate(radius*1.5/2 + 0.5,0,0);
+    const group = new THREE.Group();
+    const materials = [new THREE.MeshBasicMaterial({color: 0xff0000}), 
+                       new THREE.MeshBasicMaterial({color: 0x00ff00}), 
+                       new THREE.MeshBasicMaterial({color: 0x0000ff}), ];
+    for(let i=0; i<3; i++){    
+        const mesh = new THREE.Mesh(geometry, materials[i]);
+        mesh.rotation.z = i==1 ? Math.PI/2 : 0;
+        mesh.rotation.y = i==2 ? -Math.PI/2 : 0;
+        group.add(mesh);
+    }
+    
+    scene.add(group);
 }
 
 // function ArrayEqual(a = [], b = []){
