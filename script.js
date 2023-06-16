@@ -2,13 +2,13 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 
-let rot = 0;
+// let rot = 0;
 
 // レンダラーを作成
-const canvasElement = document.querySelector("#canvas");
+const canvasScene = document.querySelector("#canvasScene");
 const renderer = new THREE.WebGLRenderer({
     antialias: true,
-    canvas: canvasElement,
+    canvas: canvasScene,
 });
 
 // シーンを作成
@@ -19,7 +19,7 @@ const camera = new THREE.PerspectiveCamera(45, 1.0, 1, 5000);
 camera.position.set(0, 0, +1000);
 
 // カメラコントローラー作成
-const controls = new OrbitControls(camera, canvasElement);
+const controls = new OrbitControls(camera, canvasScene);
 controls.enablePan = false;
 
 // カメラを滑らかに
@@ -27,9 +27,9 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.2;
 
 //ラジアン変換
-const radian = rot * Math.PI / 180;
-camera.position.x = 1000 * Math.sin(radian);
-camera.position.y = 1000 * Math.cos(radian);
+// const radian = rot * Math.PI / 180;
+// camera.position.x = 1000 * Math.sin(radian);
+// camera.position.y = 1000 * Math.cos(radian);
 //原点方向を見つめる
 camera.lookAt(new THREE.Vector3(0,0,0));
 
@@ -77,9 +77,27 @@ function onResize(){
 
 
 
+// let image = document.getElementById("canvasImage");
 let input = document.getElementById("inputImage");
-let image = document.getElementById("image");
+let selectMode = document.getElementById("selectMode");
+// let canvasImage = document.createElement("canvas");
+let canvasImage = document.getElementById("canvasImage");
 input.addEventListener("change", DisplayImage);
+selectMode.addEventListener("change", CreatePoints);
+
+let ctx = canvasImage.getContext("2d", {willReadFrequently: true});
+let imageData = null;
+let imageColorData = null;
+let imageSize = 0;
+let colorItemSize = 0;
+let image = new Image();
+const RADIUS = 200;
+
+window.onload = init();
+
+function init(){
+    CreatePoints();
+}
 
 function DisplayImage(){
 
@@ -87,39 +105,83 @@ function DisplayImage(){
     let reader = new FileReader();
 
     //読み込んだファイルのURLをresultに格納
+    
+    if(input.files[0] == null)  return;
     reader.readAsDataURL(input.files[0]);
     
     //読み込みが完了次第，画像のURLをsrcに格納して表示
     reader.onload = function(e){
         image.src = e.target.result;
         image.onload = function(){
-            CreatePointsRGB();
+            CreatePointsInit();
         }
     }
 }
-
-//canvas
-let canvas = document.createElement("canvas");
-let ctx = canvas.getContext("2d", {willReadFrequently: true});
-const RADIUS = 200;
 
 function CheckFileExtension(fileName){
   return fileName.split(".").pop();
 }
 
-function CreatePointsRGB(){
-    ClearScene();
+function CreatePointsInit(){
     const useAlphaChannel = CheckFileExtension(input.files[0].name) == "png" ? true : false;
-    canvas.width = image.width;
-    canvas.height = image.height;
+    canvasImage.width = image.width;
+    canvasImage.height = image.height;
     ctx.drawImage(image, 0, 0);
+    imageData = ctx.getImageData(0, 0, image.width, image.height);
+    imageSize = imageData.data.length;
+    colorItemSize = useAlphaChannel ? 4 : 3;
+    CreatePoints();
+}
+
+function CreatePoints(){
+    ClearScene();
+    const mode = selectMode.value;
+    switch (mode){
+        case "RGB":
+            if(imageData == null){
+                CreateRGBSample();
+                break;
+            }
+            CreateRGBPoints();
+            break;
+        case "HSL":
+            if(imageData == null){
+                CreateHSLSample();
+                break;
+            }
+            CreateHSLPoints();
+            break;
+    }
+}
+
+function ClearScene(){
+    while(scene.children.length > 0){
+        scene.remove(scene.children[0]);
+    }
+}
+
+function CreateAxisRGB(){
+    const geometry = new THREE.BoxGeometry(RADIUS*1.5, 1, 1);
+    geometry.translate(RADIUS*1.5/2 + 0.5,0,0);
+    const group = new THREE.Group();
+    const materials = [new THREE.MeshBasicMaterial({color: 0xff0000}), 
+                       new THREE.MeshBasicMaterial({color: 0x00ff00}), 
+                       new THREE.MeshBasicMaterial({color: 0x0000ff}), ];
+    for(let i=0; i<3; i++){    
+        const mesh = new THREE.Mesh(geometry, materials[i]);
+        mesh.rotation.z = i==1 ? Math.PI/2 : 0;
+        mesh.rotation.y = i==2 ? -Math.PI/2 : 0;
+        group.add(mesh);
+    }
+    
+    scene.add(group);
+}
+
+function CreateRGBPoints(){
     CreateAxisRGB();
-    let imageData = ctx.getImageData(0, 0, image.width, image.height);
-    let imageSize = imageData.data.length;
     const boxes = [];
-    const colorItemSize = useAlphaChannel ? 4 : 3;
     for(let i=0; i<imageSize; i+=colorItemSize){
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const geometry = new THREE.BoxGeometry(5, 5, 5);
         let [r, g, b] = [imageData.data[i], imageData.data[i+1], imageData.data[i+2]];
         [r, g, b] = [r/255, g/255, b/255];
         let colors = [];
@@ -147,65 +209,20 @@ function CreatePointsRGB(){
     scene.add(mesh);
 }
 
-function ClearScene(){
-    while(scene.children.length > 0){
-        scene.remove(scene.children[0]);
-    }
-}
-
-// CreateCubeRGB();
-
-// function CreateCubeRGB(){
-//     const NUM = 10;
-//     for(let i=0; i<NUM; i++){
-//         for(let j=0; j<NUM; j++){
-//             for(let k=0; k<NUM; k++){
-                
-//             }
-//         }
-//     }
-// }
-
-function CreateAxisRGB(){
-    const geometry = new THREE.BoxGeometry(RADIUS*1.5, 1, 1);
-    geometry.translate(RADIUS*1.5/2 + 0.5,0,0);
-    const group = new THREE.Group();
-    const materials = [new THREE.MeshBasicMaterial({color: 0xff0000}), 
-                       new THREE.MeshBasicMaterial({color: 0x00ff00}), 
-                       new THREE.MeshBasicMaterial({color: 0x0000ff}), ];
-    for(let i=0; i<3; i++){    
-        const mesh = new THREE.Mesh(geometry, materials[i]);
-        mesh.rotation.z = i==1 ? Math.PI/2 : 0;
-        mesh.rotation.y = i==2 ? -Math.PI/2 : 0;
-        group.add(mesh);
-    }
-    
-    scene.add(group);
-}
 
 
-function CreatePointsHSL(){
-    ClearScene();
-    const useAlphaChannel = CheckFileExtension(input.files[0].name) == "png" ? true : false;
-    canvas.width = image.width;
-    canvas.height = image.height;
-    ctx.drawImage(image, 0, 0);
-    let imageData = ctx.getImageData(0, 0, image.width, image.height);
-    let imageSize = imageData.data.length;
-    let boxes = [];
-    const colorItemSize = useAlphaChannel ? 4 : 3;
+function CreateHSLPoints(){
+    const boxes = [];
+    const theta = l => (1-l)*Math.PI;
     for(let i=0; i<imageSize; i+=colorItemSize){
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const geometry = new THREE.BoxGeometry(5, 5, 5);
         let [r, g, b] = [imageData.data[i], imageData.data[i+1], imageData.data[i+2]];
         [r, g, b] = [r/255, g/255, b/255];
-        let [h, s, l] = rgb2hsl(r,g,b);
-        const rad = RADIUS;
-        const theta = (1-l) * Math.PI;
-        const phi = h;
+        const [h, s, l] = rgb2hsl(r,g,b);
         const geometryTrans = geometry.translate(
-                s*rad*Math.sin(theta)*Math.cos(phi),
-                rad*Math.cos(theta),
-                s*rad*Math.sin(theta)*Math.sin(phi)
+                s*RADIUS*Math.sin(theta(l))*Math.cos(h),
+                RADIUS*Math.cos(theta(l)),
+                s*RADIUS*Math.sin(theta(l))*Math.sin(h)
         );
         boxes.push(geometryTrans);
         let colors = [];
@@ -225,7 +242,6 @@ function CreatePointsHSL(){
 }
 
 function rgb2hsl (r, g, b) {
-
 	let max = Math.max( r, g, b ) ;
 	let min = Math.min( r, g, b ) ;
 	let diff = max - min ;
@@ -234,23 +250,19 @@ function rgb2hsl (r, g, b) {
 	let s = (diff == 0) ? 0 : diff / (1-(Math.abs(max + min - 1)));
 	let l = (max + min) / 2;
 
-
-	switch( min ) {
-		case max :
+	switch(min){
+		case max:
 			h = 0 ;
-		break ;
-
-		case r :
+		    break ;
+		case r:
 			h = (60 * ((b - g) / diff)) + 180 ;
-		break ;
-
-		case g :
+		    break ;
+		case g:
 			h = (60 * ((r - b) / diff)) + 300 ;
-		break ;
-
-		case b :
+		    break;
+		case b:
 			h = (60 * ((g - r) / diff)) + 60 ;
-		break ;
+		    break ;
 	}
 
     h = h * (Math.PI/180);
@@ -262,8 +274,35 @@ function lerp (a, b, p){
     return a + (b - a)*p;
 }
 
-CreateCubeHSL();
-function CreateCubeHSL(){
+function CreateRGBSample(){
+    CreateAxisRGB();
+    let boxes = [];
+    for(let r=0; r<256; r+=15){
+        for(let g=0; g<256; g+=15){
+            for(let b=0; b<256; b+=15){
+                const geometry = new THREE.BoxGeometry(5, 5, 5);
+                const [R, G, B] = [r/255, g/255, b/255];
+                let colors = [];
+                for(let j=0, len = geometry.attributes.position.count*3; j<len; j+=3){
+                    colors[j] = R;
+                    colors[j+1] = G;
+                    colors[j+2] = B;
+                }
+                geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+                const geometryTrans = geometry.translate(RADIUS*R,RADIUS*G,RADIUS*B);
+                boxes.push(geometryTrans);
+            }
+        }
+    }
+    const geometries = BufferGeometryUtils.mergeGeometries(boxes);
+    const material = new THREE.MeshBasicMaterial({
+        vertexColors: true
+    });
+    const mesh = new THREE.Mesh(geometries, material);
+    scene.add(mesh);
+}
+
+function CreateHSLSample(){
     let boxes = [];
     for(let r=0; r<256; r+=15){
         for(let g=0; g<256; g+=15){
