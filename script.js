@@ -87,11 +87,13 @@ selectMode.addEventListener("change", CreatePoints);
 
 let ctx = canvasImage.getContext("2d", {willReadFrequently: true});
 let imageData = null;
-let imageColorData = null;
+let imageColors = [];
 let imageSize = 0;
 let colorItemSize = 0;
 let image = new Image();
 const RADIUS = 200;
+const theta = l => (1-l)*Math.PI;
+const pointSize = 5;
 
 window.onload = init();
 
@@ -129,6 +131,7 @@ function CreatePointsInit(){
     ctx.drawImage(image, 0, 0);
     imageData = ctx.getImageData(0, 0, image.width, image.height);
     imageSize = imageData.data.length;
+    console.log("画素数:"+imageSize);
     colorItemSize = useAlphaChannel ? 4 : 3;
     CreatePoints();
 }
@@ -177,67 +180,114 @@ function CreateAxisRGB(){
     scene.add(group);
 }
 
+function CheckIncludeColor(r,g,b){
+
+}
+
 function CreateRGBPoints(){
     CreateAxisRGB();
-    const boxes = [];
+    // const boxes = [];
+    const vertices = [];
+    const colors = [];
+    const sizes = [];
     for(let i=0; i<imageSize; i+=colorItemSize){
-        const geometry = new THREE.BoxGeometry(5, 5, 5);
+        // const geometry = new THREE.BoxGeometry(5, 5, 5);
+        // const geometry = new THREE.BufferGeometry();
         let [r, g, b] = [imageData.data[i], imageData.data[i+1], imageData.data[i+2]];
         [r, g, b] = [r/255, g/255, b/255];
-        let colors = [];
-        for(let j=0, len = geometry.attributes.position.count*3; j<len; j+=3){
-            colors[j] = r;
-            colors[j+1] = g;
-            colors[j+2] = b;
-        }
-        geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-        const geometryTrans = geometry.translate(r*RADIUS, g*RADIUS, b*RADIUS);
-        boxes.push(geometryTrans);
+        // let colors = [];
+        // for(let j=0, len = geometry.attributes.position.count*3; j<len; j+=3){
+            // colors[j] = r;
+            // colors[j+1] = g;
+            // colors[j+2] = b;
+        // }
+        vertices.push(r*RADIUS,g*RADIUS,b*RADIUS);
+        colors.push(r,g,b);
+        sizes.push(pointSize);
+        // geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        // const geometryTrans = geometry.translate(r*RADIUS, g*RADIUS, b*RADIUS);
+        // boxes.push(geometryTrans);
+        // boxes.push(geometry);
         // colors = [];
     }
-    const geometries = BufferGeometryUtils.mergeGeometries(boxes);
+    // const geometries = BufferGeometryUtils.mergeGeometries(boxes);
     // console.log(count);
     // console.log(geometries.attributes.position.count);
     // const material = new THREE.RawShaderMaterial({
     //     vertexShader: document.getElementById("RGBvertexShader").textContent,
     //     fragmentShader: document.getElementById("RGBfragmentShader").textContent
     // });
-    const material = new THREE.MeshBasicMaterial({
-        vertexColors: true
+    // const material = new THREE.MeshBasicMaterial({
+    //     vertexColors: true
+    // });
+    // const mesh = new THREE.Mesh(geometries, material);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+    const pointTexture = new THREE.TextureLoader().load("disc.png");
+    const material = new THREE.ShaderMaterial({
+        uniforms:{
+            pointTexture: {value: pointTexture}
+        },
+        vertexShader: document.getElementById("PointVertexShader").textContent,
+        fragmentShader: document.getElementById("PointFragmentShader").textContent
     });
-    const mesh = new THREE.Mesh(geometries, material);
+    const mesh = new THREE.Points(geometry, material);
     scene.add(mesh);
 }
 
 
 
 function CreateHSLPoints(){
-    const boxes = [];
-    const theta = l => (1-l)*Math.PI;
+    // const boxes = [];
+    const vertices = [];
+    const colors = [];
+    const sizes = [];
     for(let i=0; i<imageSize; i+=colorItemSize){
-        const geometry = new THREE.BoxGeometry(5, 5, 5);
+        // const geometry = new THREE.BoxGeometry(5, 5, 5);
         let [r, g, b] = [imageData.data[i], imageData.data[i+1], imageData.data[i+2]];
         [r, g, b] = [r/255, g/255, b/255];
         const [h, s, l] = rgb2hsl(r,g,b);
-        const geometryTrans = geometry.translate(
-                s*RADIUS*Math.sin(theta(l))*Math.cos(h),
-                RADIUS*Math.cos(theta(l)),
-                s*RADIUS*Math.sin(theta(l))*Math.sin(h)
+        // const geometryTrans = geometry.translate(
+        //         s*RADIUS*Math.sin(theta(l))*Math.cos(h),
+        //         RADIUS*Math.cos(theta(l)),
+        //         s*RADIUS*Math.sin(theta(l))*Math.sin(h)
+        // );
+        // boxes.push(geometryTrans);
+        // let colors = [];
+        // for(let j=0, len = geometry.attributes.position.count*3; j<len; j+=3){
+        //     colors[j] = r;
+        //     colors[j+1] = g;
+        //     colors[j+2] = b;
+        // }
+        // geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        colors.push(r,g,b);
+        vertices.push(
+            s*RADIUS*Math.sin(theta(l))*Math.cos(h),
+            RADIUS*Math.cos(theta(l)),
+            s*RADIUS*Math.sin(theta(l))*Math.sin(h)
         );
-        boxes.push(geometryTrans);
-        let colors = [];
-        for(let j=0, len = geometry.attributes.position.count*3; j<len; j+=3){
-            colors[j] = r;
-            colors[j+1] = g;
-            colors[j+2] = b;
-        }
-        geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        sizes.push(pointSize);
     }
-    const geometries = BufferGeometryUtils.mergeGeometries(boxes);
-    const material = new THREE.MeshBasicMaterial({
-        vertexColors: true
+    // const geometries = BufferGeometryUtils.mergeGeometries(boxes);
+    // const material = new THREE.MeshBasicMaterial({
+    //     vertexColors: true
+    // });
+    // const mesh = new THREE.Mesh(geometries, material);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+    const pointTexture = new THREE.TextureLoader().load("disc.png");
+    const material = new THREE.ShaderMaterial({
+        uniforms:{
+            pointTexture: {value: pointTexture}
+        },
+        vertexShader: document.getElementById("PointVertexShader").textContent,
+        fragmentShader: document.getElementById("PointFragmentShader").textContent
     });
-    const mesh = new THREE.Mesh(geometries, material);
+    const mesh = new THREE.Points(geometry, material);
     scene.add(mesh);
 }
 
@@ -276,63 +326,103 @@ function lerp (a, b, p){
 
 function CreateRGBSample(){
     CreateAxisRGB();
-    let boxes = [];
+    const vertices = [];
+    const colors = [];
+    const sizes = [];
     for(let r=0; r<256; r+=15){
         for(let g=0; g<256; g+=15){
             for(let b=0; b<256; b+=15){
-                const geometry = new THREE.BoxGeometry(5, 5, 5);
+                // const geometry = new THREE.BoxGeometry(5, 5, 5);
                 const [R, G, B] = [r/255, g/255, b/255];
-                let colors = [];
-                for(let j=0, len = geometry.attributes.position.count*3; j<len; j+=3){
-                    colors[j] = R;
-                    colors[j+1] = G;
-                    colors[j+2] = B;
-                }
-                geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-                const geometryTrans = geometry.translate(RADIUS*R,RADIUS*G,RADIUS*B);
-                boxes.push(geometryTrans);
+                // for(let j=0, len = geometry.attributes.position.count*3; j<len; j+=3){
+                //     colors[j] = R;
+                //     colors[j+1] = G;
+                //     colors[j+2] = B;
+                // }
+                // geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+                // const geometryTrans = geometry.translate(RADIUS*R,RADIUS*G,RADIUS*B);
+                // boxes.push(geometryTrans);
+                colors.push(R,G,B);
+                vertices.push(RADIUS*R,RADIUS*G,RADIUS*B);
+                sizes.push(Math.floor(Math.random()*(10-1)+1));
             }
         }
     }
-    const geometries = BufferGeometryUtils.mergeGeometries(boxes);
-    const material = new THREE.MeshBasicMaterial({
-        vertexColors: true
+    // const geometries = BufferGeometryUtils.mergeGeometries(boxes);
+    // const material = new THREE.MeshBasicMaterial({
+    //     vertexColors: true
+    // });
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+    const pointTexture = new THREE.TextureLoader().load("disc.png");
+    const material = new THREE.ShaderMaterial({
+        uniforms:{
+            pointTexture: {value: pointTexture}
+        },
+        vertexShader: document.getElementById("PointVertexShader").textContent,
+        fragmentShader: document.getElementById("PointFragmentShader").textContent
     });
-    const mesh = new THREE.Mesh(geometries, material);
+    const mesh = new THREE.Points(geometry, material);
     scene.add(mesh);
 }
 
 function CreateHSLSample(){
-    let boxes = [];
+    // let boxes = [];
+    const vertices = [];
+    const colors = [];
+    const sizes = [];
     for(let r=0; r<256; r+=15){
         for(let g=0; g<256; g+=15){
             for(let b=0; b<256; b+=15){
-                const geometry = new THREE.BoxGeometry(5, 5, 5);
+                // const geometry = new THREE.BoxGeometry(5, 5, 5);
                 const [R, G, B] = [r/255, g/255, b/255];
                 let [h, s, l] = rgb2hsl(R,G,B);
-                const rad = RADIUS;
-                const theta = (1-l) * Math.PI;
-                const phi = h;
-                let colors = [];
-                for(let j=0, len = geometry.attributes.position.count*3; j<len; j+=3){
-                    colors[j] = R;
-                    colors[j+1] = G;
-                    colors[j+2] = B;
-                }
-                geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-                const geometryTrans = geometry.translate(
-                        s*rad*Math.sin(theta)*Math.cos(phi),
-                        rad*Math.cos(theta),
-                        s*rad*Math.sin(theta)*Math.sin(phi));
-                boxes.push(geometryTrans);
+                // const rad = RADIUS;
+                // const theta = (1-l) * Math.PI;
+                // const phi = h;
+                // let colors = [];
+                // for(let j=0, len = geometry.attributes.position.count*3; j<len; j+=3){
+                //     colors[j] = R;
+                //     colors[j+1] = G;
+                //     colors[j+2] = B;
+                // }
+                // geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+                // const geometryTrans = geometry.translate(
+                //         s*rad*Math.sin(theta)*Math.cos(phi),
+                //         rad*Math.cos(theta),
+                //         s*rad*Math.sin(theta)*Math.sin(phi));
+                // boxes.push(geometryTrans);
+                colors.push(R,G,B);
+                vertices.push(
+                    s*RADIUS*Math.sin(theta(l))*Math.cos(h),
+                    RADIUS*Math.cos(theta(l)),
+                    s*RADIUS*Math.sin(theta(l))*Math.sin(h)
+                );
+                sizes.push(Math.floor(Math.random()*(10-1)+1));
             }
         }
     }
-    const geometries = BufferGeometryUtils.mergeGeometries(boxes);
-    const material = new THREE.MeshBasicMaterial({
-        vertexColors: true
+    // const geometries = BufferGeometryUtils.mergeGeometries(boxes);
+    // const material = new THREE.MeshBasicMaterial({
+    //     vertexColors: true
+    // });
+    // const mesh = new THREE.Mesh(geometries, material);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+    const pointTexture = new THREE.TextureLoader().load("disc.png");
+    const material = new THREE.ShaderMaterial({
+        uniforms:{
+            pointTexture: {value: pointTexture}
+        },
+        vertexShader: document.getElementById("PointVertexShader").textContent,
+        fragmentShader: document.getElementById("PointFragmentShader").textContent
     });
-    const mesh = new THREE.Mesh(geometries, material);
+    const mesh = new THREE.Points(geometry, material);
+    scene.add(mesh);
     scene.add(mesh);
 }
 
